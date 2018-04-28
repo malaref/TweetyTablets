@@ -3,10 +3,9 @@ import os
 import sqlite3
 import uuid
 
-import requests
 from flask import Flask, request, render_template, jsonify
 from flask_cors import CORS
-from util import Tweet, tweet_factory, datetime_format
+from util import Tweet, tweet_factory, datetime_format, send_data
 
 app = Flask(__name__)
 CORS(app)
@@ -14,6 +13,7 @@ CORS(app)
 # Configuration
 initial_tweets_count = 100
 tablet_servers = ['http://localhost:5001', 'http://localhost:5002']
+tablets_per_server = 2
 
 # Database
 database_path = 'tweets.db'
@@ -43,14 +43,14 @@ db.row_factory = tweet_factory
 
 # Initialization
 all_tweets = db.execute('SELECT * FROM Tweets').fetchall()
-number_of_tablets = len(tablet_servers) * 2
+number_of_tablets = len(tablet_servers) * tablets_per_server
 first_datetime = min(all_tweets).get_datetime()
 last_datetime = max(all_tweets).get_datetime()
 timespan = (last_datetime - first_datetime) / number_of_tablets
 
 # Helper functions
 def get_server_index(tablet_index):
-    return tablet_index // 2
+    return tablet_index // tablets_per_server
 
 def get_tablet_index(tweet):
     return min(int((tweet.get_datetime() - first_datetime).total_seconds() / timespan.total_seconds()),
@@ -60,8 +60,7 @@ def get_server(tweet):
     return tablet_servers[get_server_index(get_tablet_index(tweet))]
 
 for tweet in all_tweets:
-    requests.post(get_server(tweet) + '/create/',
-                  data=tweet.__dict__())
+    send_data(get_server(tweet) + '/master/create/', tweet.to_dict())
 
 @app.route('/', methods=['GET'])
 def index():
@@ -74,8 +73,7 @@ def index():
 
 @app.route('/create/', methods=['POST'])
 def create():
-    tweet = Tweet({'created_at': request.form['created_at']})
-    return jsonify([get_server(tweet)])
+    return jsonify([get_server(Tweet({'created_at': request.form['created_at']}))])
 
 
 @app.route('/read/', methods=['POST'])
@@ -100,3 +98,27 @@ def delete():
                'user': request.form['user'],
                'created_at': request.form['created_at'],
                'content': request.form['content']}))])
+
+
+@app.route('/sync/create/', methods=['POST'])
+def sync_create():
+    Tweet({'id': request.form['id'],
+           'user': request.form['user'],
+           'created_at': request.form['created_at'],
+           'content': request.form['content']}).insert_into(db)
+    db.commit()
+    return 'Synced!'
+
+@app.route('/sync/update/', methods=['POST'])
+def sync_update():
+    db.execute('UPDATE Tweets SET user = ?, created_at = ?, content = ? WHERE id = ?',
+               [request.form['user'], request.form['created_at'], request.form['content'], request.form['id']])
+    db.commit()
+    return 'Synced!'
+
+@app.route('/sync/delete/', methods=['POST'])
+def sync_delete():
+    db.execute('DELETE FROM Tweets WHERE id = ?',
+               [request.form['id']])
+    db.commit()
+    return 'Synced!'

@@ -1,5 +1,6 @@
 import datetime
 import random
+import requests
 
 from dateutil.parser import parse
 
@@ -25,7 +26,7 @@ class Tweet(object):
     def __cmp__(self, other):
         return cmp(self.get_datetime(), other.get_datetime())
 
-    def __dict__(self):
+    def to_dict(self):
         return {'id': self.id, 'user': self.user, 'created_at': self.created_at, 'content': self.content}
 
     def insert_into(self, db):
@@ -48,3 +49,6 @@ def tweet_factory(cursor, row):
 
 def random_date(start, end):
     return start + datetime.timedelta(seconds=random.randint(0, int((end - start).total_seconds())))
+
+def send_data(url, data):
+    requests.post(url, data=data)
