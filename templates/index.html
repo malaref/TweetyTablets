@@ -5,24 +5,36 @@
     <title>Tweety Tablets</title>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-    <link href="https://stackpath.bootstrapcdn.com/bootswatch/4.1.0/cyborg/bootstrap.min.css" rel="stylesheet" integrity="sha384-5KpNAytmiDxBanrkBv7mxkrUV1uggYCd+nLTGVig8i0ubJLVBFWQKXnGK5nR4kJF" crossorigin="anonymous">
+    <link href="https://stackpath.bootstrapcdn.com/bootswatch/3.3.7/cyborg/bootstrap.min.css" rel="stylesheet" integrity="sha384-D9XILkoivXN+bcvB2kSOowkIvIcBbNdoDQvfBNsxYAIieZbx8/SI4NeUvrRGCpDi" crossorigin="anonymous">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-datetimepicker/4.17.47/css/bootstrap-datetimepicker.min.css" rel="stylesheet" integrity="sha256-yMjaV542P+q1RnH6XByCPDfUFhmOafWbeLPmqKh11zo=" crossorigin="anonymous">
+    <link href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet" integrity="sha384-wvfXpqpZZVQGK6TAh5PVlGOfQNHSoD2xbE+QkPxCAFlNEevoEH3Sl0sibVcOQVnN" crossorigin="anonymous">
   </head>
   <body>
     <div class="container">
 
       <div>
         <h1>Tweety Tablets</h1>
-        <form action="/read/" method="post" id="searchForm" class="form-horizontal needs-validation">
+        <form action="/read/" method="post" id="read-form" class="form-horizontal needs-validation">
           <div class="row">
             <div class="form-group col-sm-4">
-              <label for="fromField" class="control-label align-middle">From</label>
-              <input class="form-control" type="datetime-local" name="from" id="fromField" value="{{ first_datetime }}" required>
+              <label for="from-field" class="control-label align-middle">From</label>
+              <div class="input-group date" id="fromDatetimePicker">
+                <input class="form-control" type="text" name="from" id="from-field" value="{{ first_datetime }}" required>
+                <span class="input-group-addon">
+                  <span class="fa fa-calendar align-center"></span>
+                </span>
+              </div>
             </div>
             <div class="form-group col-sm-4">
-              <label for="toField" class="control-label">To</label>
-              <input class="form-control" type="datetime-local" name="to" id="toField" value="{{ last_datetime }}" required>
+              <label for="to-field" class="control-label align-middle">To</label>
+              <div class="input-group date" id="toDatetimePicker">
+                <input class="form-control" type="text" name="to" id="to-field" value="{{ last_datetime }}" required>
+                <span class="input-group-addon">
+                  <span class="fa fa-calendar align-center"></span>
+                </span>
+              </div>
             </div>
-            <div class="form-group col-sm-4 align-bottom">
+            <div class="form-group col-sm-4 align-bottom pull-down">
               <button type="submit" class="btn" id="show">Show</button>
             </div>
           </div>
@@ -49,7 +61,7 @@
               <h4 class="modal-title">Add a new Tweet</h4>
               <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
             </div>
-            <form action="/create/" method="post" enctype="multipart/form-data" class="form-horizontal needs-validation responsive-form ">
+            <form action="/create/" method="post" class="form-horizontal needs-validation" id="create-form">
               <div class="modal-body">
                 <div class="form-group">
                   <label for="user" class="control-label">User</label>
@@ -61,8 +73,14 @@
                 </div>
                 <div class="form-group">
                   <label for="created_at" class="control-label">Created at</label>
-                  <input class="form-control" type="datetime-local" name="created_at" id="created_at" value="{{ now }}" required>
+                  <div class="input-group date" id="createDatetimePicker">
+                    <input class="form-control" type="text" name="created_at" id="created_at" value="{{ last_datetime }}" required>
+                    <span class="input-group-addon">
+                      <span class="fa fa-calendar"></span>
+                    </span>
+                  </div>
                 </div>
+                <input type="hidden" name="id" value="{{ new_id }}" required>
               </div>
               <div class="modal-footer">
                 <button type="reset" class="btn btn-default">Reset</button>
@@ -83,55 +101,94 @@
           </div>
         </div>
       </div>
-      <script src="http://code.jquery.com/jquery-3.3.1.min.js" integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8=" crossorigin="anonymous"></script>
-      <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.0/js/bootstrap.bundle.min.js" integrity="sha384-lZmvU/TzxoIQIOD9yQDEpvxp6wEU32Fy0ckUgOH4EIlMOCdR823rg4+3gWRwnX1M" crossorigin="anonymous"></script>
-      <script>
-        $(function() {
-          function submitToMaster(url, data, next) {
-            $.ajax({
-              type: 'POST',
-              url: url,
-              data: data,
-              success: function(response) {
-                response.forEach(function(tablet) {
-                  $.ajax({
-                    type: 'POST',
-                    url: tablet + url,
-                    data: data,
-                    success: next
-                  });
-                });
-              }
-            });
-          }
-
-          function addTweets(tweets) {
-            tweets.forEach(function(tweet) {
-              $('#tweets').append(
-                '<tr>\
-                  <td class="align-middle">'+tweet.created_at+'</td>\
-                  <td class="align-middle">'+tweet.user+'</td>\
-                  <td class="align-middle">'+tweet.content+'</td>\
-                  <td class="align-middle">\
-                    <form action="/delete/" method="post" class="pull-right form-inline responsive-form">\
-                      <input type="hidden" name="id" value="'+tweet.id+'">\
-                      <button type="submit" class="btn btn-link btn-xs" title="Delete">\
-                        <span class="glyphicon">&#xe014;</span>\
-                      </button>\
-                    </form>\
-                  </td>\
-                </tr>'
-              );
-            });
-          }
-
-          function read(first, last) {
-              $('#tweets').empty();
-              submitToMaster('/read/', {"from": first, "to": last}, addTweets);
-          }
-
-        });
-      </script>
     </div>
+    <script src="http://code.jquery.com/jquery-3.3.1.min.js" integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8=" crossorigin="anonymous"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.22.1/moment.min.js" integrity="sha256-L3S3EDEk31HcLA5C6T2ovHvOcD80+fgqaCDt2BAi92o=" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-datetimepicker/4.17.47/js/bootstrap-datetimepicker.min.js" integrity="sha256-5YmaxAwMjIpMrVlK84Y/+NjCpKnFYa8bWWBbUHSBGfU=" crossorigin="anonymous"></script>
+    <script>
+      $(function() {
+        function showResponse(response) {
+          $('.modal').modal('hide');
+          $('#message').text(response);
+          $('#response').modal('show');
+          $('#response').on('hide.bs.modal', function() {
+            window.location.replace("/");
+          });
+        }
+
+        function submitToMaster(url, data, next) {
+          $.ajax({
+            type: 'POST',
+            url: url,
+            data: data,
+            success: function(response) {
+              response.forEach(function(tablet) {
+                $.ajax({
+                  type: 'POST',
+                  url: tablet + url,
+                  data: data,
+                  success: next
+                });
+              });
+            }
+          });
+        }
+
+        function addTweets(tweets) {
+          tweets.forEach(function(tweet) {
+            $('#tweets').append(
+              '<tr>\
+                <td class="align-middle">'+tweet.created_at+'</td>\
+                <td class="align-middle">'+tweet.user+'</td>\
+                <td class="align-middle">'+tweet.content+'</td>\
+                <td class="align-middle">\
+                  <form action="/delete/" method="post" class="pull-right form-inline delete-form">\
+                    <input type="hidden" name="id" value="'+tweet.id+'">\
+                    <button type="submit" class="btn btn-link btn-xs" title="Delete">\
+                      <span class="fa fa-remove"></span>\
+                    </button>\
+                  </form>\
+                </td>\
+              </tr>'
+            );
+          });
+          $('.delete-form').submit(function(e) {
+            submitToMaster('/delete/', $(e.target).serialize(), showResponse);
+            e.preventDefault();
+          });
+        }
+
+        function read() {
+          $('#tweets').empty();
+          submitToMaster('/read/', {"from": $('#from-field').val(), "to": $('#to-field').val()}, addTweets);
+        }
+
+        $('#create-form').submit(function(e) {
+          submitToMaster('/create/', $('#create-form').serialize(), showResponse);
+          e.preventDefault();
+        });
+
+        $('#read-form').submit(function(e) {
+          read();
+          e.preventDefault();
+        });
+
+        $('#fromDatetimePicker').datetimepicker({
+            defaultDate: new Date($('#from-field').val()),
+            format: 'YYYY/MM/DD hh:mm:ss A'
+        });
+
+        $('#toDatetimePicker').datetimepicker({
+            defaultDate: new Date($('#to-field').val()),
+            format: 'YYYY/MM/DD hh:mm:ss A'
+        });
+
+        $('#createDatetimePicker').datetimepicker({
+            defaultDate: new Date($('#created_at').val()),
+            format: 'YYYY/MM/DD hh:mm:ss A'
+        });
+      });
+    </script>
   </body>
 </html>

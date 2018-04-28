@@ -1,15 +1,19 @@
 import datetime
 import os
 import sqlite3
+import uuid
 
+import requests
 from flask import Flask, request, render_template, jsonify
-from util import dict_factory, date_of_tweet, standard_datetime, standard_datetime_format, datetime_format
+from flask_cors import CORS
+from util import Tweet, tweet_factory, datetime_format
 
 app = Flask(__name__)
+CORS(app)
 
 # Configuration
 initial_tweets_count = 100
-tablet_servers = ['server1', 'server2']
+tablet_servers = ['http://localhost:5001', 'http://localhost:5002']
 
 # Database
 database_path = 'tweets.db'
@@ -21,68 +25,68 @@ if not os.path.exists(database_path):
         access_token_key=os.environ['ACCESS_TOKEN_KEY'],
         access_token_secret=os.environ['ACCESS_TOKEN_SECRET'])
     stream_sample = twitter_api.GetStreamSample()
-    conn = sqlite3.connect(database_path)
-    conn.execute(
-        'CREATE TABLE Tweets (id INTEGER PRIMARY KEY AUTOINCREMENT, user TEXT, created_at TEXT, content TEXT)')
+    db = sqlite3.connect(database_path)
+    db.execute(
+        'CREATE TABLE Tweets (id TEXT PRIMARY KEY, user TEXT, created_at TEXT, content TEXT)')
     for _ in range(initial_tweets_count):
         next_tweet = stream_sample.next()
-        while "delete" in next_tweet:
+        while 'delete' in next_tweet:
             next_tweet = stream_sample.next()
-        conn.execute('INSERT INTO Tweets (user, created_at, content) VALUES (?,?,?)',
-                     [next_tweet["user"]["screen_name"],
-                      standard_datetime_format(next_tweet["created_at"]),
-                      next_tweet["text"]])
-    conn.commit()
-    conn.close()
-db = sqlite3.connect(database_path)
-db.row_factory = dict_factory
+        Tweet({'id': uuid.uuid4().hex,
+               'user': next_tweet['user']['screen_name'],
+               'created_at': next_tweet['created_at'],
+               'content': next_tweet['text']}).insert_into(db)
+    db.commit()
+    db.close()
+db = sqlite3.connect(database_path, check_same_thread=False)
+db.row_factory = tweet_factory
 
 # Initialization
 all_tweets = db.execute('SELECT * FROM Tweets').fetchall()
 number_of_tablets = len(tablet_servers) * 2
-first_datetime = date_of_tweet(min(all_tweets, key=date_of_tweet))
-last_datetime = date_of_tweet(max(all_tweets, key=date_of_tweet))
+first_datetime = min(all_tweets).get_datetime()
+last_datetime = max(all_tweets).get_datetime()
 timespan = (last_datetime - first_datetime) / number_of_tablets
 
-print 'Done!'
-
 # Helper functions
-def get_server_by_tablet(tablet):
-    return tablet // 2
+def get_server_index(tablet_index):
+    return tablet_index // 2
 
-def get_tablet_by_datetime(tweet_datetime):
-    return min(int((tweet_datetime - first_datetime).total_seconds() / timespan.total_seconds()),
+def get_tablet_index(tweet):
+    return min(int((tweet.get_datetime() - first_datetime).total_seconds() / timespan.total_seconds()),
                number_of_tablets - 1)
 
-def get_tablet_by_tweet(tweet):
-    return get_tablet_by_datetime(date_of_tweet(tweet))
-
+def get_server(tweet):
+    return tablet_servers[get_server_index(get_tablet_index(tweet))]
 
 for tweet in all_tweets:
-    pass
-
+    requests.post(get_server(tweet) + '/create/',
+                  data=tweet.__dict__())
 
 @app.route('/', methods=['GET'])
 def index():
     return render_template('index.html',
                            first_datetime=first_datetime.strftime(datetime_format),
                            last_datetime=last_datetime.strftime(datetime_format),
-                           now=datetime.datetime.now().strftime(datetime_format))
+                           now=datetime.datetime.now().strftime(datetime_format),
+                           new_id=uuid.uuid4().hex)
 
 
 @app.route('/create/', methods=['POST'])
 def create():
-    return jsonify([get_server_by_tablet(get_tablet_by_datetime(standard_datetime(request.form['created_at'])))])
+    tweet = Tweet({'created_at': request.form['created_at']})
+    return jsonify([get_server(tweet)])
 
 
 @app.route('/read/', methods=['POST'])
 def read():
-    first_server = get_server_by_tablet(get_tablet_by_datetime(standard_datetime(request.form['from'])))
-    last_server = get_server_by_tablet(get_tablet_by_datetime(standard_datetime(request.form['to'])))
-    return jsonify([i for i in range(first_server, last_server + 1)])
+    first_server_index = get_server_index(get_tablet_index(Tweet({'created_at': request.form['from']})))
+    last_server_index = get_server_index(get_tablet_index(Tweet({'created_at': request.form['to']})))
+    return jsonify([tablet_servers[server_index]
+                    for server_index in range(first_server_index, last_server_index + 1)])
 
 
 @app.route('/delete/', methods=['POST'])
 def delete():
     tweet = db.execute('SELECT * FROM Tweets WHERE id = ?', [request.form['id']]).fetchone()
-    return jsonify([get_server_by_tablet(get_tablet_by_tweet(tweet))])
+    return jsonify([get_server(tweet)])
