@@ -2,7 +2,7 @@
 
 <html lang="en">
   <head>
-    <title>Trendy Tweets</title>
+    <title>Tweety Tablets</title>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
     <link href="https://stackpath.bootstrapcdn.com/bootswatch/4.1.0/cyborg/bootstrap.min.css" rel="stylesheet" integrity="sha384-5KpNAytmiDxBanrkBv7mxkrUV1uggYCd+nLTGVig8i0ubJLVBFWQKXnGK5nR4kJF" crossorigin="anonymous">
@@ -10,11 +10,22 @@
   <body>
     <div class="container">
 
-      <div class="center-block">
-        <h1>Trendy Tweets</h1>
-        <form action="/read/" method="post" id="searchForm">
-          <input class="form-control" type="date" name="from" id="fromField" placeholder="From...">
-          <input class="form-control" type="date" name="to"   id="toField"   placeholder="To..."  >
+      <div>
+        <h1>Tweety Tablets</h1>
+        <form action="/read/" method="post" id="searchForm" class="form-horizontal needs-validation">
+          <div class="row">
+            <div class="form-group col-sm-4">
+              <label for="fromField" class="control-label align-middle">From</label>
+              <input class="form-control" type="datetime-local" name="from" id="fromField" value="{{ first_datetime }}" required>
+            </div>
+            <div class="form-group col-sm-4">
+              <label for="toField" class="control-label">To</label>
+              <input class="form-control" type="datetime-local" name="to" id="toField" value="{{ last_datetime }}" required>
+            </div>
+            <div class="form-group col-sm-4 align-bottom">
+              <button type="submit" class="btn" id="show">Show</button>
+            </div>
+          </div>
         </form>
       </div>
 
@@ -35,18 +46,22 @@
         <div class="modal-dialog">
           <div class="modal-content">
             <div class="modal-header">
-              <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
               <h4 class="modal-title">Add a new Tweet</h4>
+              <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
             </div>
-            <form action="/create/" method="post" enctype="multipart/form-data" class="form-horizontal responsiveForm">
+            <form action="/create/" method="post" enctype="multipart/form-data" class="form-horizontal needs-validation responsive-form ">
               <div class="modal-body">
                 <div class="form-group">
                   <label for="user" class="control-label">User</label>
-                  <input class="form-control" type="text" name="user" id="user">
+                  <input class="form-control" type="text" name="user" id="user" required>
                 </div>
                 <div class="form-group">
                   <label for="content" class="control-label">Content</label>
-                  <input class="form-control" type="text" name="content" id="content">
+                  <input class="form-control" type="text" name="content" id="content" required>
+                </div>
+                <div class="form-group">
+                  <label for="created_at" class="control-label">Created at</label>
+                  <input class="form-control" type="datetime-local" name="created_at" id="created_at" value="{{ now }}" required>
                 </div>
               </div>
               <div class="modal-footer">
@@ -98,7 +113,7 @@
                   <td class="align-middle">'+tweet.user+'</td>\
                   <td class="align-middle">'+tweet.content+'</td>\
                   <td class="align-middle">\
-                    <form action="/delete/" method="post" class="pull-right form-inline responsiveForm">\
+                    <form action="/delete/" method="post" class="pull-right form-inline responsive-form">\
                       <input type="hidden" name="id" value="'+tweet.id+'">\
                       <button type="submit" class="btn btn-link btn-xs" title="Delete">\
                         <span class="glyphicon">&#xe014;</span>\
