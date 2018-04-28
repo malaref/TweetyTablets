@@ -87,10 +87,16 @@ def read():
 
 @app.route('/update/', methods=['POST'])
 def update():
-    tweet = db.execute('SELECT * FROM Tweets WHERE id = ?', [request.form['id']]).fetchone()
-    return jsonify([get_server(tweet)])
+    return jsonify([get_server(
+        Tweet({'id': request.form['id'],
+               'user': request.form['user'],
+               'created_at': request.form['created_at'],
+               'content': request.form['content']}))])
 
 @app.route('/delete/', methods=['POST'])
 def delete():
-    tweet = db.execute('SELECT * FROM Tweets WHERE id = ?', [request.form['id']]).fetchone()
-    return jsonify([get_server(tweet)])
+    return jsonify([get_server(
+        Tweet({'id': request.form['id'],
+               'user': request.form['user'],
+               'created_at': request.form['created_at'],
+               'content': request.form['content']}))])
