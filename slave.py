@@ -35,6 +35,12 @@ def read():
     return jsonify(tweets)
 
 
+@app.route('/update/', methods=['POST'])
+def update():
+    db.execute('UPDATE Tweets SET user = ?, created_at = ?, content = ? WHERE id = ?',
+               [request.form['user'], request.form['created_at'], request.form['content'], request.form['id']])
+    return 'Updated!'
+
 @app.route('/delete/', methods=['POST'])
 def delete():
     db.execute('DELETE FROM Tweets WHERE id = ?',

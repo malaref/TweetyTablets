@@ -85,6 +85,10 @@ def read():
     return jsonify([tablet_servers[server_index]
                     for server_index in range(first_server_index, last_server_index + 1)])
 
+@app.route('/update/', methods=['POST'])
+def update():
+    tweet = db.execute('SELECT * FROM Tweets WHERE id = ?', [request.form['id']]).fetchone()
+    return jsonify([get_server(tweet)])
 
 @app.route('/delete/', methods=['POST'])
 def delete():

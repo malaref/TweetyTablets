@@ -54,7 +54,7 @@
       </table>
 
       <button type="button" class="btn btn-default" data-toggle="modal" data-target="#add">Add a new Tweet</button>
-      <div id="add" class="modal">
+      <div id="add-modal" class="modal">
         <div class="modal-dialog">
           <div class="modal-content">
             <div class="modal-header">
@@ -64,17 +64,17 @@
             <form action="/create/" method="post" class="form-horizontal needs-validation" id="create-form">
               <div class="modal-body">
                 <div class="form-group">
-                  <label for="user" class="control-label">User</label>
-                  <input class="form-control" type="text" name="user" id="user" required>
+                  <label for="new-user" class="control-label">User</label>
+                  <input class="form-control" type="text" name="user" id="new-user" required>
                 </div>
                 <div class="form-group">
-                  <label for="content" class="control-label">Content</label>
-                  <input class="form-control" type="text" name="content" id="content" required>
+                  <label for="new-content" class="control-label">Content</label>
+                  <input class="form-control" type="text" name="content" id="new-content" required>
                 </div>
                 <div class="form-group">
-                  <label for="created_at" class="control-label">Created at</label>
-                  <div class="input-group date" id="createDatetimePicker">
-                    <input class="form-control" type="text" name="created_at" id="created_at" value="{{ last_datetime }}" required>
+                  <label for="new-created_at" class="control-label">Created at</label>
+                  <div class="input-group date" id="create-datetime-picker">
+                    <input class="form-control" type="text" name="created_at" id="new-created_at" value="{{ last_datetime }}" required>
                     <span class="input-group-addon">
                       <span class="fa fa-calendar"></span>
                     </span>
@@ -83,14 +83,50 @@
                 <input type="hidden" name="id" value="{{ new_id }}" required>
               </div>
               <div class="modal-footer">
-                <button type="reset" class="btn btn-default">Reset</button>
                 <button type="submit" class="btn btn-primary">Add</button>
               </div>
             </form>
           </div>
         </div>
       </div>
-      <div id="response" class="modal">
+
+      <div id="update-modal" class="modal">
+        <div class="modal-dialog">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h4 class="modal-title">Edit a Tweet</h4>
+              <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+            </div>
+            <form action="/update/" method="post" class="form-horizontal needs-validation" id="update-form">
+              <div class="modal-body">
+                <div class="form-group">
+                  <label for="user" class="control-label">User</label>
+                  <input class="form-control" type="text" name="user" id="update-user" required>
+                </div>
+                <div class="form-group">
+                  <label for="content" class="control-label">Content</label>
+                  <input class="form-control" type="text" name="content" id="update-content" required>
+                </div>
+                <div class="form-group">
+                  <label for="created_at" class="control-label">Created at</label>
+                  <div class="input-group date" id="update-datetime-picker">
+                    <input class="form-control" type="text" name="created_at" id="update-created_at" value="{{ last_datetime }}" required>
+                    <span class="input-group-addon">
+                      <span class="fa fa-calendar"></span>
+                    </span>
+                  </div>
+                </div>
+                <input type="hidden" name="id" id="update-id" required>
+              </div>
+              <div class="modal-footer">
+                <button type="submit" class="btn btn-primary">Edit</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <div id="response-modal" class="modal">
         <div class="modal-dialog">
           <div class="modal-content">
             <div class="modal-header">
@@ -111,8 +147,8 @@
         function showResponse(response) {
           $('.modal').modal('hide');
           $('#message').text(response);
-          $('#response').modal('show');
-          $('#response').on('hide.bs.modal', function() {
+          $('#response-modal').modal('show');
+          $('#response-modal').on('hide.bs.modal', function() {
             window.location.replace("/");
           });
         }
@@ -143,6 +179,17 @@
                 <td class="align-middle">'+tweet.user+'</td>\
                 <td class="align-middle">'+tweet.content+'</td>\
                 <td class="align-middle">\
+                  <form action="/update/" method="post" class="pull-right form-inline update-form">\
+                    <input type="hidden" name="id" value="'+tweet.id+'">\
+                    <input type="hidden" name="created_at" value="'+tweet.created_at+'">\
+                    <input type="hidden" name="user" value="'+tweet.user+'">\
+                    <input type="hidden" name="content" value="'+tweet.content+'">\
+                    <button type="submit" class="btn btn-link btn-xs" title="Edit">\
+                      <span class="fa fa-edit"></span>\
+                    </button>\
+                  </form>\
+                </td>\
+                <td class="align-middle">\
                   <form action="/delete/" method="post" class="pull-right form-inline delete-form">\
                     <input type="hidden" name="id" value="'+tweet.id+'">\
                     <button type="submit" class="btn btn-link btn-xs" title="Delete">\
@@ -155,6 +202,23 @@
           });
           $('.delete-form').submit(function(e) {
             submitToMaster('/delete/', $(e.target).serialize(), showResponse);
+            e.preventDefault();
+          });
+          $('.update-form').submit(function(e) {
+            $('.modal').modal('hide');
+            data = {};
+            $(e.target).serializeArray().forEach(function(obj){
+              data[obj.name] = obj.value;
+            });
+            $('#update-id').val(data['id']);
+            $('#update-created_at').val(data['created_at']);
+            $('#update-user').val(data['user']);
+            $('#update-content').val(data['content']);
+            $('#update-modal').modal('show');
+            $('#update-datetime-picker').datetimepicker({
+              defaultDate: new Date($('#update-created_at').val()),
+              format: 'YYYY/MM/DD hh:mm:ss A'
+            });
             e.preventDefault();
           });
         }
@@ -174,6 +238,11 @@
           e.preventDefault();
         });
 
+        $('#update-form').submit(function(e) {
+            submitToMaster('/update/', $(e.target).serialize(), showResponse);
+            e.preventDefault();
+          });
+
         $('#fromDatetimePicker').datetimepicker({
             defaultDate: new Date($('#from-field').val()),
             format: 'YYYY/MM/DD hh:mm:ss A'
@@ -184,8 +253,8 @@
             format: 'YYYY/MM/DD hh:mm:ss A'
         });
 
-        $('#createDatetimePicker').datetimepicker({
-            defaultDate: new Date($('#created_at').val()),
+        $('#create-datetime-picker').datetimepicker({
+            defaultDate: new Date($('#new-created_at').val()),
             format: 'YYYY/MM/DD hh:mm:ss A'
         });
       });
